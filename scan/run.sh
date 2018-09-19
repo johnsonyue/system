@@ -143,7 +143,7 @@ case $cmd in
       "setup")
         cat << "EOF"
 apt-get install -y python-pip rabbitmq-server redis-server
-pip install celery "celery[redis]"
+pip install -U celery "celery[redis]"
 EOF
         ;;
       "activate")
@@ -169,11 +169,11 @@ EOF
     case $operation in 
       "put" | "get")
         test ! -z "$LOCAL" && test ! -z "$REMOTE" || usage
-        from=$(test "$operation" == "put" && echo "$LOCAL" || echo "$REMOTE")
-        to=$(test "$operation" == "put" && echo "$REMOTE" || echo "$LOCAL")
+        from=$(test "$operation" == "put" && echo "$LOCAL" || echo "$ssh:$REMOTE")
+        to=$(test "$operation" == "put" && echo "$ssh:$REMOTE" || echo "$LOCAL")
         expect -c " \
           set timeout -1
-          spawn scp -P $port $from $ssh:$to
+          spawn scp -P $port $from $to
           expect -re \".*password.*\" {send \"$pass\r\"}
           expect eof \
         "

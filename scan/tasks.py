@@ -2,20 +2,18 @@ from celery import Celery
 import sys
 import subprocess
 
-app = Celery('tasks', backend="redis://localhost", broker="amqp://")
-
-def shell(cmd):
-  h = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).stdout
-  out = h.read(); h.close()
-  return out
+app = Celery('tasks', backend="redis://**", broker="amqp://mngr:**@**")
 
 @app.task
 def probe(cmd, opt):
+  if not opt.has_key('input'):
+    probe.update_state(state="FAILURE", meta={'reason': 'No input'})
+    return
+  inp = opt['input']
   pps = opt['pps'] if opt.has_key('pps') else 100
   if cmd == 'trace':
     method = opt['method'] if opt.has_key('method') else 'icmp-paris'
-    date = shell('date +%Y%m%d-%H:%M:%S').strip()
-    cmd = "scamper -c 'trace -P %s' -p %d -o - -O warts -f input | tee '%s.warts' | sc_analysis_dump -C" % (method, pps, date, )
+    cmd = "scamper -c 'trace -P %s' -p %d -o - -O warts -f input | tee '%s' | sc_analysis_dump -C" % (method, pps, inp, )
     sys.stderr.write( cmd + "\n" )
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     h = p.stdout
