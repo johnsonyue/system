@@ -60,7 +60,7 @@ import json
 import sys
 
 name = sys.argv[1]
-l = json.load(open('nodes.json'))
+l = json.load(open('secrets.json'))['nodes']
 c = filter( lambda x: x['name'] == name, l )
 if c:
   print "%s@%s|%d|%s" % (c[0]['username'],c[0]['IP_addr'],c[0]['port'],c[0]['password'])
@@ -68,25 +68,46 @@ EOF
   ) "$1"
 }
 
-probe(){
+filter(){
   python <(
   cat << "EOF"
+import json
+import sys
+
+o = json.load(sys.stdin)
+
+del o['nodes']
+print json.dumps(o, indent=2)
 EOF
-  ) $1 $2
+  )
+}
+export filter
+
+probe(){
+  ./run.sh ssh $node_name put -l $INPUT -r "/home/john/$INPUT"
+  python do.py
 }
 
 usage(){
-  echo "./run.sh <\$oommand> <\$args> [\$conf_str]"
+  echo "./run.sh <\$command> <\$args> [\$options]"
   echo "COMMANDS:"
   echo "  target"
+  echo ""
   echo "  task"
+  echo ""
   echo "  ssh <\$node_name> <\$operation>"
   echo "    OPERATIONS:"
   echo "      setup"
   echo "      activate"
-  echo "      get/put -l local -r remote"
-  echo "      sync -l local -r remote"
-  echo "  probe -i <\$input> -o <\$output> <\$node_name>"
+  echo "      get/put -l <\$local> -r <\$remote>"
+  echo "      sync -l <\$local> -r <\$remote>"
+  echo ""
+  echo "  probe <\$node_name> -i <\$input> -o <\$output>"
+  echo "    I/O TYPES:"
+  echo "      # local & remote result file share the same name <\$result_file>"
+  echo "      -i <\$target_file> -o <\$result_file>"
+  echo "      -i - -o -"
+  echo "      -i - -o <\$result_file>"
   exit
 }
 
@@ -138,9 +159,14 @@ case $cmd in
     IFS="|" read ssh port pass < <(creds $node_name)
 
     # inline scripts.
-    ( test "$operation" == "setup" || test "$operation" == "activate" ) && \
+    ( test "$operation" == "setup" || \
+      test "$operation" == "activate" ) && \
     case $operation in
       "setup")
+        ./run.sh ssh $node_name put -l tasks.py -r /home/john/tasks.py
+        cat secrets.json | filter >.secret
+        ./run.sh ssh $node_name put -l .secret -r /home/john/secrets.json
+
         cat << "EOF"
 apt-get install -y python-pip rabbitmq-server redis-server
 pip install -U celery "celery[redis]"
@@ -192,13 +218,15 @@ EOF
 
   "probe")
     test ! -z "$INPUT" && test ! -z "$OUTPUT" || usage
-    test $# -lt 3 && usage
+    test $# -lt 2 && usage
     node_name=$2
     c=$3
     c='{"cmd":"trace","opt":{"method":"udp-paris","pps":100}}'
+    # credentials.
+    IFS="|" read ssh port pass < <(creds $node_name)
 
-    test "$INPUT" == "-" && echo 'stdin'
-    probe $node_name $c
+    test "$INPUT" == "-" && \
+      probe $node_name $c
     ;;
   "*")
     usage
