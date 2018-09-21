@@ -226,6 +226,7 @@ EOF
     IFS="|" read ssh port pass < <(creds $node_name)
 
     test "$INPUT" == "-" && \
+      lg $node_name $c || \
       probe $node_name $c
     ;;
   "*")

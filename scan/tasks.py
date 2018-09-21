@@ -15,8 +15,8 @@ backend_ip = backend['IP_addr']
 
 app = Celery(
   'tasks',
-  backend = "redis://" % (backend_ip),
-  broker = "amqp://%s:%s@%s:%s" % (username, password, b_ip, port)
+  backend = "redis://%s" % (backend_ip),
+  broker = "amqp://%s:%s@%s:%s" % (username, password, broker_ip, port)
 )
 
 @app.task
@@ -46,6 +46,7 @@ def on_rcvd(ch, method, properties, body, p):
   print(" [x] Received %r" % body)
   if not body:
     p.stdin.close()
+    p.wait()
     ch.stop_consuming()
     return
   p.stdin.write( body + '\n' )
@@ -60,7 +61,6 @@ def reply(ch, p):
       h.close()
       break
     ch.basic_publish(exchange='', routing_key = 'read', body = "%s" % (l))
-  p.wait()
 
 @app.task
 def listen():

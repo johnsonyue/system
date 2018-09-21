@@ -2,9 +2,14 @@ import subprocess
 import threading
 import os
 import json
+import sys
 
 from celery import Celery
 import pika
+
+if len(sys.argv) < 2:
+  exit()
+task = sys.argv[1]
 
 # utils
 def shell(cmd):
@@ -55,36 +60,36 @@ backend_ip = backend['IP_addr']
 
 celery = Celery()
 celery.conf.update(
-  broker_url = "amqp://%s:%s@%s:%s" % (username, password, b_ip, port),
+  broker_url = "amqp://%s:%s@%s:%s" % (username, password, broker_ip, port),
   result_backend = "redis://%s" % (backend_ip)
 )
 
-'''
-r = celery.send_task('tasks.probe', ['trace',{'input': inp}], queue='vp.hk01')
-r.get( on_message=on_probe_message, propagate=False )
-'''
+if task == 'probe':
+  r = celery.send_task('tasks.probe', ['trace',{'input': inp}], queue='vp.hk01')
+  r.get( on_message=on_probe_message, propagate=False )
 
-# send task to add new client
-r = celery.send_task('tasks.listen', [], queue='vp.hk02')
+elif task == 'lg':
+  # send task to add new client
+  r = celery.send_task('tasks.listen', [], queue='vp.hk02')
 
-credentials = pika.PlainCredentials(username, password)
-connection = pika.BlockingConnection(pika.ConnectionParameters(broker_ip, credentials=credentials))
-channel = connection.channel()
+  credentials = pika.PlainCredentials(username, password)
+  connection = pika.BlockingConnection(pika.ConnectionParameters(broker_ip, credentials=credentials))
+  channel = connection.channel()
 
-t = threading.Thread(target=listen)
-t.start()
+  t = threading.Thread(target=listen)
+  t.start()
 
-# write
-channel.queue_declare(queue='write', auto_delete = True)
-while True:
-  try:
-    l = raw_input()
-  except:
-    #print(" [x] Sent ''")
-    channel.basic_publish(exchange='', routing_key='write', body='')
-    break
-  channel.basic_publish(exchange='', routing_key='write', body=l)
-  #print(" [x] Sent %s" % (l) )
+  # write
+  channel.queue_declare(queue='write', auto_delete = True)
+  while True:
+    try:
+      l = raw_input()
+    except:
+      #print(" [x] Sent ''")
+      channel.basic_publish(exchange='', routing_key='write', body='')
+      break
+    channel.basic_publish(exchange='', routing_key='write', body=l)
+    #print(" [x] Sent %s" % (l) )
 
-t.join()
-connection.close()
+  t.join()
+  connection.close()
