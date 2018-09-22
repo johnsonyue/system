@@ -1,7 +1,13 @@
 {
+  "directory": "test-dir",
   "target": {
     "method": "US",
     "density": 28,
     "offset": 1
+  },
+  "probe": {
+    "cmd": "trace",
+    "method": "udp-paris",
+    "pps":100
   }
 }

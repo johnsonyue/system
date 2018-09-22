@@ -21,14 +21,14 @@ app = Celery(
 
 @app.task
 def probe(cmd, opt):
-  if not opt.has_key('input'):
-    probe.update_state(state="FAILURE", meta={'reason': 'No input'})
+  if not opt.has_key('output'):
+    probe.update_state(state="FAILURE", meta={'reason': 'No output name'})
     return
-  inp = opt['input']
+  output = opt['output']; inp = opt['input']
   pps = opt['pps'] if opt.has_key('pps') else 100
   if cmd == 'trace':
     method = opt['method'] if opt.has_key('method') else 'udp-paris'
-    cstr = "scamper -c 'trace -P %s' -p %d -o - -O warts -f input | tee '%s' | sc_analysis_dump -C" % (method, pps, inp, )
+    cstr = "scamper -c 'trace -P %s' -p %d -o - -O warts -f %s | tee '%s' | sc_analysis_dump -C" % (method, pps, inp, output, )
     sys.stderr.write( cstr + "\n" )
     p = subprocess.Popen(cstr, shell=True, stdout=subprocess.PIPE)
     h = p.stdout

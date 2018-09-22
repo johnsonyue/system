@@ -14,14 +14,16 @@
       "IP_addr": "A.A.A.A",
       "port": 22,
       "username": "xx",
-      "password": "xx"
+      "password": "xx",
+      "directory": "xx"
     },
     {
       "name": "B",
       "IP_addr": "B.B.B.B",
       "port": 22,
       "username": "xx",
-      "password": "xx"
+      "password": "xx",
+      "directory": "xx"
     }
   ]
 }
