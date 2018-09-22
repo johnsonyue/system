@@ -96,13 +96,6 @@ EOF
 }
 export filter
 
-probe(){
-  node_name=$1
-  IFS="|" read _ _ _ dir< <(creds $node_name)
-  ./run.sh ssh -n $node_name put -l $INPUT -r "$dir/$INPUT"
-  #python do.py probe
-}
-
 usage(){
   echo "./run.sh <\$command> <\$args> [\$options]"
   echo "COMMANDS:"
@@ -274,8 +267,8 @@ EOF
     node_name="$NODE"
 
     test "$INPUT" == "-" && \
-      lg $node_name $c || \
-      probe $node_name
+      python do.py lg -n $node_name -f $INPUT || \
+      python do.py probe -n $node_name
     ;;
   "*")
     usage
